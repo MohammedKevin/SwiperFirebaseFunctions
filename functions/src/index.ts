@@ -40,17 +40,24 @@ type SwipeDto = {
     swipeResult: SwipeResult
 }
 
-app.post('/users', async (req, res) => {
+type SwipeCollectionDto = {
+    swipeCollectionId: string,
+    userId:string,
+}
+
+app.post('/swipe', async (req, res) => {
     try {
         const swipeDto: SwipeDto = req.body as SwipeDto
         const collection = 'swipeCollection';
         const subCollection = 'movies';
-        // vom lux
 
         const result = db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId);
         const movieSwipe : Movie = (await db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId).get()).data() as unknown as Movie;
-        const swipeCollection : SwipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
-        if(movieSwipe !== null){
+        let swipeCollection : SwipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
+        if(swipeCollection.members.filter(m => m === swipeDto.userId).length === 0){
+            res.status(500).send('error');
+        }
+        if(result !== null){
             if(swipeDto.swipeResult === 'like'){
                 await result.update({
                     likes: admin.firestore.FieldValue.arrayUnion(swipeDto.userId),
@@ -66,6 +73,9 @@ app.post('/users', async (req, res) => {
                     nopes: admin.firestore.FieldValue.arrayUnion(swipeDto.userId),
                 });
             }
+        }
+        swipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
+        if(swipeCollection !== null){
             if(movieSwipe.likes.length === swipeCollection.members.length){
                 res.status(200).json({match: true});
                 return;
@@ -80,10 +90,25 @@ app.post('/users', async (req, res) => {
         res.status(500).send(error);
     }
 });
+app.post('/swipeCollection', async (req, res) => {
+    try {
+        const swipeCollectionDto: SwipeCollectionDto = req.body as SwipeCollectionDto
+        const collection = 'swipeCollection';
 
-app.get('/test', async (req,res) => {
-    res.send("Hello from KEVIN!");
-})
+        const result = await db.collection(collection).doc(swipeCollectionDto.swipeCollectionId);
+        if(result !== null){
+            if(swipeCollectionDto.userId !== null){
+                await result.update({
+                    members: admin.firestore.FieldValue.arrayUnion(swipeCollectionDto.userId),
+                });
+                res.status(200).json({added: true});
+            }
+        }
+        res.status(200).json({added: false});
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
 
 
 //define google cloud function name
