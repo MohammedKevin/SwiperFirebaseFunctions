@@ -59,9 +59,9 @@ app.post('/swipe', async (req, res) => {
 
         const result = db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId.toString());
         let swipeCollection : SwipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
-        // if(swipeCollection.members.filter(m => m === swipeDto.userId).length === 0){
-        //     res.status(500).send('error');
-        // }
+        if(swipeCollection.members.filter(m => m === swipeDto.userId).length === 0){
+            res.status(500).send('error');
+        }
         console.log(swipeDto);
         if(result !== null){
             if(swipeDto.swipeResult === 'like'){
