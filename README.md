@@ -1,2 +1,5 @@
-npm run serve
-npm run deploy
+# Swiper
+
+## Tinder for Movies
+
+https://github.com/EnglederLucas/Swiper
