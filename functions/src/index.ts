@@ -35,9 +35,13 @@ type SwipeResult = "like" | "nope" | "superLike";
 
 type SwipeDto = {
     swipeCollectionId: string,
-    movieId: string,
+    movieId: number,
     userId:string,
     swipeResult: SwipeResult
+}
+
+type MatchesDto = {
+    swipeCollectionId: string,
 }
 
 type SwipeCollectionDto = {
@@ -48,15 +52,17 @@ type SwipeCollectionDto = {
 app.post('/swipe', async (req, res) => {
     try {
         const swipeDto: SwipeDto = req.body as SwipeDto
+
+
         const collection = 'swipeCollection';
         const subCollection = 'movies';
 
-        const result = db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId);
-        const movieSwipe : Movie = (await db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId).get()).data() as unknown as Movie;
+        const result = db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId.toString());
         let swipeCollection : SwipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
-        if(swipeCollection.members.filter(m => m === swipeDto.userId).length === 0){
-            res.status(500).send('error');
-        }
+        // if(swipeCollection.members.filter(m => m === swipeDto.userId).length === 0){
+        //     res.status(500).send('error');
+        // }
+        console.log(swipeDto);
         if(result !== null){
             if(swipeDto.swipeResult === 'like'){
                 await result.update({
@@ -74,7 +80,7 @@ app.post('/swipe', async (req, res) => {
                 });
             }
         }
-        swipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
+        const movieSwipe : Movie = (await db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).doc(swipeDto.movieId.toString()).get()).data() as unknown as Movie;
         if(swipeCollection !== null){
             if(movieSwipe.likes.length === swipeCollection.members.length){
                 res.status(200).json({match: true});
@@ -86,8 +92,9 @@ app.post('/swipe', async (req, res) => {
             }
         }
         res.status(200).json({match: false});
+        return;
     } catch (error) {
-        res.status(500).send(error);
+        res.status(200).json(req.body);
     }
 });
 app.post('/swipeCollection', async (req, res) => {
@@ -107,6 +114,53 @@ app.post('/swipeCollection', async (req, res) => {
         res.status(200).json({added: false});
     } catch (error) {
         res.status(500).send(error);
+    }
+});
+
+app.patch('/swipeCollection', async (req, res) => {
+    try {
+        const swipeCollectionDto: SwipeCollectionDto = req.body as SwipeCollectionDto
+        const collection = 'swipeCollection';
+
+        const result = await db.collection(collection).doc(swipeCollectionDto.swipeCollectionId);
+        if(result !== null){
+            if(swipeCollectionDto.userId !== null){
+                await result.update({
+                    members: admin.firestore.FieldValue.arrayRemove(swipeCollectionDto.userId),
+                });
+                res.status(200).json({removed: true});
+            }
+        }
+        res.status(200).json({removed: false});
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+app.get('/matches', async (req, res) => {
+    try {
+        const swipeDto: MatchesDto = req.body as MatchesDto
+
+
+        const collection = 'swipeCollection';
+        const subCollection = 'movies';
+
+        let swipeCollection : SwipeCollection = (await (await db.collection(collection).doc(swipeDto.swipeCollectionId)).get()).data() as unknown as SwipeCollection;
+        
+        const movies : Movie[] = await db.collection(collection).doc(swipeDto.swipeCollectionId).collection(subCollection).get() as unknown as Movie[];
+        let matches = [];
+        if(swipeCollection !== null){
+            
+            movies.forEach(m => {
+                if(m.likes.length === swipeCollection.members.length){
+                    matches.push()
+                }
+            });
+        }
+        res.status(200).json({match: false});
+        return;
+    } catch (error) {
+        res.status(200).json(req.body);
     }
 });
 
